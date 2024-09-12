@@ -7,13 +7,11 @@ package frc.robot;
 import static edu.wpi.first.wpilibj2.command.Commands.*;
 
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.Constants.DriveDirections;
 import frc.robot.commands.DriveCommand;
-import frc.robot.lib.Tuple;
 import frc.robot.subsystems.LEDSubsystem;
 import frc.robot.subsystems.RomiDrivetrain;
-import java.util.List;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -28,6 +26,7 @@ public class RobotContainer {
   private final XboxController m_controller = new XboxController(0);
 
   private final DriveCommand m_autoCommand;
+  private final SendableChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -41,16 +40,40 @@ public class RobotContainer {
             m_romiDrivetrain, () -> -m_controller.getLeftX(), () -> -m_controller.getLeftY()));
     m_leds.setDefaultCommand(
         run(() -> m_leds.setAutoBlinkState(() -> m_controller.getAButton()), m_leds));
+
+    autoChooser = new SendableChooser<>();
+    autoChooser.setDefaultOption("simple drive", m_autoCommand);
+    autoChooser.addOption(
+        "multi drive",
+        schedulePath(new Command[] {rotateRomi(90, 1), translateRomi(3, 0.5), rotateRomi(180, 0)}));
   }
 
-  /**
-   * @param simplePath list of pairs of drive directions and distances (inches) in the respective
-   *     directions
-   */
-  public void schedulePath(List<Tuple<DriveDirections, Double>> simplePath) {
-    sequence(print("unimplemented")); // should be a sequence of rotation and translation commands
-    // run(() -> m_romiDrivetrain.arcadeDrive(1, 0), m_romiDrivetrain).until(() ->
-    // m_romiDrivetrain.getLeftDistanceInch() > 4);
+  public Command rotateRomi(double degrees, double threshold) {
+    double setpoint = m_romiDrivetrain.getRotZ() + degrees;
+    return run(
+            () ->
+                m_romiDrivetrain.arcadeDrive(
+                    0.1, m_romiDrivetrain.calculateRotOutput(m_romiDrivetrain.getRotZ(), setpoint)),
+            m_romiDrivetrain)
+        .until(() -> Math.abs(m_romiDrivetrain.getRotZ() - setpoint) < threshold)
+        .finallyDo(() -> m_romiDrivetrain.arcadeDrive(0, 0));
+  }
+
+  public Command translateRomi(double distInches, double threshold) {
+    double setpoint = m_romiDrivetrain.getLeftDistanceInch() + distInches;
+    return run(
+            () ->
+                m_romiDrivetrain.arcadeDrive(
+                    m_romiDrivetrain.calculateTranslateOutput(
+                        m_romiDrivetrain.getLeftDistanceInch(), setpoint),
+                    0),
+            m_romiDrivetrain)
+        .until(() -> Math.abs(m_romiDrivetrain.getLeftDistanceInch() - setpoint) < threshold)
+        .finallyDo(() -> m_romiDrivetrain.arcadeDrive(0, 0));
+  }
+
+  public Command schedulePath(Command[] pathCommands) {
+    return sequence(pathCommands);
   }
 
   /**
@@ -67,7 +90,6 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // An ExampleCommand will run in autonomous
-    return m_autoCommand;
+    return autoChooser.getSelected();
   }
 }

@@ -4,6 +4,7 @@
 
 package frc.robot.subsystems;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.wpilibj.BuiltInAccelerometer;
@@ -27,6 +28,8 @@ public class RomiDrivetrain extends SubsystemBase {
   // to use DIO pins 4/5 and 6/7 for the left and right
   private final Encoder m_leftEncoder;
   private final Encoder m_rightEncoder;
+  private final PIDController rotController;
+  private final PIDController translateController;
 
   // Set up the differential drive controller
   private final DifferentialDrive m_diffDrive;
@@ -44,6 +47,9 @@ public class RomiDrivetrain extends SubsystemBase {
 
     m_leftEncoder = new Encoder(4, 5);
     m_rightEncoder = new Encoder(6, 7);
+    rotController = new PIDController(1, 0, 0.001);
+    translateController = new PIDController(1, 0, 0);
+
     // Use inches as unit for encoder distances
     m_leftEncoder.setDistancePerPulse((Math.PI * kWheelDiameterInch) / kCountsPerRevolution);
     m_rightEncoder.setDistancePerPulse((Math.PI * kWheelDiameterInch) / kCountsPerRevolution);
@@ -56,7 +62,7 @@ public class RomiDrivetrain extends SubsystemBase {
     m_accelerometer = new BuiltInAccelerometer();
     m_odometry =
         new DifferentialDriveOdometry(
-            new Rotation2d(getRotX(), getRotY()),
+            new Rotation2d(m_gyro.getAngle()),
             m_leftEncoder.getDistance(),
             m_rightEncoder.getDistance());
   }
@@ -106,6 +112,14 @@ public class RomiDrivetrain extends SubsystemBase {
 
   public double getAccelerationZ() {
     return m_accelerometer.getZ();
+  }
+
+  public double calculateRotOutput(double curRot, double setpoint) {
+    return rotController.calculate(curRot, setpoint);
+  }
+
+  public double calculateTranslateOutput(double curDist, double setpoint) {
+    return translateController.calculate(curDist, setpoint);
   }
 
   @Override
