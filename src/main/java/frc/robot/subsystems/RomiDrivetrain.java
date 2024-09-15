@@ -14,6 +14,7 @@ import edu.wpi.first.wpilibj.motorcontrol.Spark;
 import edu.wpi.first.wpilibj.romi.RomiGyro;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.lib.UltrasonicSensor;
 
 public class RomiDrivetrain extends SubsystemBase {
   private static final double kCountsPerRevolution = 1440.0;
@@ -36,6 +37,7 @@ public class RomiDrivetrain extends SubsystemBase {
 
   private final RomiGyro m_gyro;
   private final BuiltInAccelerometer m_accelerometer;
+  private final UltrasonicSensor m_distanceSensor;
   private final DifferentialDriveOdometry m_odometry;
 
   /** Creates a new RomiDrivetrain. */
@@ -60,6 +62,7 @@ public class RomiDrivetrain extends SubsystemBase {
     m_gyro = new RomiGyro();
     m_gyro.reset();
     m_accelerometer = new BuiltInAccelerometer();
+    m_distanceSensor = new UltrasonicSensor(3, 4); // TODO set these to the correct channels
     m_odometry =
         new DifferentialDriveOdometry(
             new Rotation2d(m_gyro.getAngle()),
@@ -120,6 +123,10 @@ public class RomiDrivetrain extends SubsystemBase {
 
   public double calculateTranslateOutput(double curDist, double setpoint) {
     return translateController.calculate(curDist, setpoint);
+  }
+
+  public boolean isObjectInFOV() {
+    return m_distanceSensor.isObjectTooClose();
   }
 
   @Override

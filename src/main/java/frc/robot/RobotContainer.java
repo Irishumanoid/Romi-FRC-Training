@@ -31,13 +31,18 @@ public class RobotContainer {
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     m_romiDrivetrain = new RomiDrivetrain();
-    m_autoCommand = new DriveCommand(m_romiDrivetrain, () -> 0.5, () -> 0);
+    m_autoCommand =
+        new DriveCommand(
+            m_romiDrivetrain, () -> 0.5, () -> 0, () -> m_romiDrivetrain.isObjectInFOV());
     m_leds = new LEDSubsystem();
     // Configure the button bindings
     configureButtonBindings();
     m_romiDrivetrain.setDefaultCommand(
         new DriveCommand(
-            m_romiDrivetrain, () -> -m_controller.getLeftX(), () -> -m_controller.getLeftY()));
+            m_romiDrivetrain,
+            () -> -m_controller.getLeftX(),
+            () -> -m_controller.getLeftY(),
+            () -> m_romiDrivetrain.isObjectInFOV()));
     m_leds.setDefaultCommand(
         run(() -> m_leds.setAutoBlinkState(() -> m_controller.getAButton()), m_leds));
 
