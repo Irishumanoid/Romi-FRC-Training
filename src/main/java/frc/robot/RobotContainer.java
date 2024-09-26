@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.commands.DriveCommand;
+import frc.robot.commands.TurnDegrees;
 import frc.robot.subsystems.LEDSubsystem;
 import frc.robot.subsystems.RomiDrivetrain;
 
@@ -46,6 +47,8 @@ public class RobotContainer {
     autoChooser.setDefaultOption("simple drive", m_autoCommand);
     autoChooser.addOption(
         "multi drive", schedulePath(new Command[] {translateRomi(0.05, 0.5), rotateRomi(180, 10)}));
+    TurnDegrees turnCommand = new TurnDegrees(0.9, 180, m_romiDrivetrain);
+    autoChooser.addOption("rotate romi command", turnCommand);
     SmartDashboard.putData("autoChooser", autoChooser);
     autoChooser.addOption("path planner", AutoBuilder.buildAuto("testauto"));
   }
