@@ -6,8 +6,10 @@ package frc.robot;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
 
-import edu.wpi.first.wpilibj.XboxController;
+import com.pathplanner.lib.auto.AutoBuilder;
+import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.commands.DriveCommand;
 import frc.robot.subsystems.LEDSubsystem;
@@ -23,7 +25,7 @@ public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   private final RomiDrivetrain m_romiDrivetrain;
   private final LEDSubsystem m_leds;
-  private final XboxController m_controller = new XboxController(0);
+  private final Joystick m_controller = new Joystick(0);
 
   private final DriveCommand m_autoCommand;
   private final SendableChooser<Command> autoChooser;
@@ -31,26 +33,21 @@ public class RobotContainer {
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     m_romiDrivetrain = new RomiDrivetrain();
-    m_autoCommand =
-        new DriveCommand(
-            m_romiDrivetrain, () -> 0.5, () -> 0, () -> m_romiDrivetrain.isObjectInFOV());
+    m_autoCommand = new DriveCommand(m_romiDrivetrain, () -> 0.5, () -> 0, () -> false);
     m_leds = new LEDSubsystem();
+
     // Configure the button bindings
     configureButtonBindings();
     m_romiDrivetrain.setDefaultCommand(
         new DriveCommand(
-            m_romiDrivetrain,
-            () -> -m_controller.getLeftX(),
-            () -> -m_controller.getLeftY(),
-            () -> m_romiDrivetrain.isObjectInFOV()));
-    m_leds.setDefaultCommand(
-        run(() -> m_leds.setAutoBlinkState(() -> m_controller.getAButton()), m_leds));
-
+            m_romiDrivetrain, () -> -m_controller.getX(), () -> -m_controller.getY(), () -> false));
+    m_leds.setDefaultCommand(run(() -> m_leds.setAutoBlinkState(() -> true), m_leds));
     autoChooser = new SendableChooser<>();
     autoChooser.setDefaultOption("simple drive", m_autoCommand);
     autoChooser.addOption(
-        "multi drive",
-        schedulePath(new Command[] {rotateRomi(90, 1), translateRomi(3, 0.5), rotateRomi(180, 0)}));
+        "multi drive", schedulePath(new Command[] {translateRomi(0.05, 0.5), rotateRomi(180, 10)}));
+    SmartDashboard.putData("autoChooser", autoChooser);
+    autoChooser.addOption("path planner", AutoBuilder.buildAuto("testauto"));
   }
 
   public Command rotateRomi(double degrees, double threshold) {
@@ -64,16 +61,16 @@ public class RobotContainer {
         .finallyDo(() -> m_romiDrivetrain.arcadeDrive(0, 0));
   }
 
-  public Command translateRomi(double distInches, double threshold) {
-    double setpoint = m_romiDrivetrain.getLeftDistanceInch() + distInches;
+  public Command translateRomi(double distMeters, double threshold) {
+    double setpoint = m_romiDrivetrain.getLeftDistanceMeter() + distMeters;
     return run(
             () ->
                 m_romiDrivetrain.arcadeDrive(
                     m_romiDrivetrain.calculateTranslateOutput(
-                        m_romiDrivetrain.getLeftDistanceInch(), setpoint),
+                        m_romiDrivetrain.getLeftDistanceMeter(), setpoint),
                     0),
             m_romiDrivetrain)
-        .until(() -> Math.abs(m_romiDrivetrain.getLeftDistanceInch() - setpoint) < threshold)
+        .until(() -> Math.abs(m_romiDrivetrain.getLeftDistanceMeter() - setpoint) < threshold)
         .finallyDo(() -> m_romiDrivetrain.arcadeDrive(0, 0));
   }
 

@@ -11,15 +11,15 @@ public class LEDSubsystem extends SubsystemBase {
   private final DigitalOutput greenLed;
   private int redFreq = 1;
   private int yellowFreq = 1;
-  private int greenFreq = 1;
+  private int greenFreq = 2;
   private boolean blink = false;
 
   private final Timer timer;
 
   public LEDSubsystem() {
-    redLed = new DigitalOutput(2);
-    yellowLed = new DigitalOutput(3);
-    greenLed = new DigitalOutput(4);
+    redLed = new DigitalOutput(0);
+    yellowLed = new DigitalOutput(1);
+    greenLed = new DigitalOutput(2);
     timer = new Timer();
     timer.start();
   }
