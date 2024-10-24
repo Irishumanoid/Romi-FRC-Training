@@ -74,6 +74,7 @@ public class Drivetrain extends SubsystemBase {
   }
 
   public void arcadeDrive(double xaxisSpeed, double zaxisRotate) {
+    System.out.println("speed" + xaxisSpeed);
     m_diffDrive.arcadeDrive(xaxisSpeed, zaxisRotate);
   }
 

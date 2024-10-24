@@ -34,7 +34,7 @@ public class WheelIOSpark implements WheelIO {
 
   @Override
   public void setDriveSpeed(double speed) {
-    motor.set(Math.max(0, Math.min(speed, 1)));
+    motor.set(Math.max(-1, Math.min(speed, 1)));
   }
 
   @Override

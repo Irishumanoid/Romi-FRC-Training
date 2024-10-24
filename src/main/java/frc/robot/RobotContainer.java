@@ -55,7 +55,7 @@ public class RobotContainer {
     configureButtonBindings();
     m_drivetrain.setDefaultCommand(
         new DriveCommand(
-            m_drivetrain, () -> -m_controller.getX(), () -> -m_controller.getY(), () -> false));
+            m_drivetrain, () -> -m_controller.getRawAxis(0), () -> -m_controller.getRawAxis(1), () -> false));
     m_leds.setDefaultCommand(run(() -> m_leds.setAutoBlinkState(() -> true), m_leds));
     autoChooser = new SendableChooser<>();
     autoChooser.setDefaultOption("simple drive", m_autoCommand);
