@@ -10,6 +10,12 @@
           "data": {
             "pathName": "testromi"
           }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "testtwo"
+          }
         }
       ]
     }

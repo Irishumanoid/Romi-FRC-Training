@@ -1,21 +1,19 @@
 package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.RomiDrivetrain;
+import frc.robot.subsystems.Drive.Drivetrain;
 
 public class TurnDegrees extends Command {
-  private final RomiDrivetrain m_drive;
+  private final Drivetrain m_drive;
   private final double m_degrees;
   private final double m_speed;
 
-
-  public TurnDegrees(double speed, double degrees, RomiDrivetrain drive) {
+  public TurnDegrees(double speed, double degrees, Drivetrain drive) {
     m_degrees = degrees;
     m_speed = speed;
     m_drive = drive;
     addRequirements(drive);
   }
-
 
   @Override
   public void initialize() {
@@ -30,12 +28,10 @@ public class TurnDegrees extends Command {
     m_drive.arcadeDrive(0.1, m_speed);
   }
 
-
   @Override
   public void end(boolean interrupted) {
     m_drive.arcadeDrive(0, 0);
   }
-
 
   @Override
   public boolean isFinished() {

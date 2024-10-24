@@ -1,26 +1,18 @@
 package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.RomiDrivetrain;
+import frc.robot.subsystems.Drive.Drivetrain;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 public class DriveCommand extends Command {
-  private final RomiDrivetrain m_drive;
+  private final Drivetrain m_drive;
   private final DoubleSupplier speed;
   private final DoubleSupplier rot;
   private final BooleanSupplier isObjectInFOV;
 
-  /**
-   * Creates a new ExampleCommand.
-   *
-   * @param drive The drive used by this command.
-   */
   public DriveCommand(
-      RomiDrivetrain drive,
-      DoubleSupplier speed,
-      DoubleSupplier rot,
-      BooleanSupplier isObjectInFOV) {
+      Drivetrain drive, DoubleSupplier speed, DoubleSupplier rot, BooleanSupplier isObjectInFOV) {
     m_drive = drive;
     this.speed = speed;
     this.rot = rot;

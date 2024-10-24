@@ -13,8 +13,11 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.commands.DriveCommand;
 import frc.robot.commands.TurnDegrees;
+import frc.robot.subsystems.Drive.Drivetrain;
+import frc.robot.subsystems.Drive.WheelIO;
+import frc.robot.subsystems.Drive.WheelIOSim;
+import frc.robot.subsystems.Drive.WheelIOSpark;
 import frc.robot.subsystems.LEDSubsystem;
-import frc.robot.subsystems.RomiDrivetrain;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -24,7 +27,7 @@ import frc.robot.subsystems.RomiDrivetrain;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final RomiDrivetrain m_romiDrivetrain;
+  private final Drivetrain m_drivetrain;
   private final LEDSubsystem m_leds;
   private final Joystick m_controller = new Joystick(0);
 
@@ -33,48 +36,77 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    m_romiDrivetrain = new RomiDrivetrain();
-    m_autoCommand = new DriveCommand(m_romiDrivetrain, () -> 0.5, () -> 0, () -> false);
+    switch (Constants.currentMode) {
+      case REAL:
+        m_drivetrain =
+            new Drivetrain(new WheelIOSpark(0, 4, 5, false), new WheelIOSpark(1, 6, 7, true));
+        break;
+      case SIM:
+        m_drivetrain = new Drivetrain(new WheelIOSim(), new WheelIOSim());
+        break;
+      default:
+        m_drivetrain = new Drivetrain(new WheelIO() {}, new WheelIO() {});
+    }
+
+    m_autoCommand = new DriveCommand(m_drivetrain, () -> 0.5, () -> 0, () -> false);
     m_leds = new LEDSubsystem();
 
     // Configure the button bindings
     configureButtonBindings();
-    m_romiDrivetrain.setDefaultCommand(
+    m_drivetrain.setDefaultCommand(
         new DriveCommand(
-            m_romiDrivetrain, () -> -m_controller.getX(), () -> -m_controller.getY(), () -> false));
+            m_drivetrain, () -> -m_controller.getX(), () -> -m_controller.getY(), () -> false));
     m_leds.setDefaultCommand(run(() -> m_leds.setAutoBlinkState(() -> true), m_leds));
     autoChooser = new SendableChooser<>();
     autoChooser.setDefaultOption("simple drive", m_autoCommand);
     autoChooser.addOption(
-        "multi drive", schedulePath(new Command[] {translateRomi(0.05, 0.5), rotateRomi(180, 10)}));
-    TurnDegrees turnCommand = new TurnDegrees(0.9, 180, m_romiDrivetrain);
+        "multi drive", schedulePath(new Command[] {translateRomi(0.5, 0.5), rotateRomi(180, 10)}));
+    TurnDegrees turnCommand = new TurnDegrees(0.9, 180, m_drivetrain);
     autoChooser.addOption("rotate romi command", turnCommand);
     SmartDashboard.putData("autoChooser", autoChooser);
     autoChooser.addOption("path planner", AutoBuilder.buildAuto("testauto"));
   }
 
   public Command rotateRomi(double degrees, double threshold) {
-    double setpoint = m_romiDrivetrain.getRotZ() + degrees;
+    double initSetpoint = m_drivetrain.getAngle() + degrees;
+    if (Math.signum(m_drivetrain.getAngle()) != Math.signum(initSetpoint)) {
+      initSetpoint += -Math.signum(initSetpoint) * 360;
+    }
+    double setpoint = initSetpoint;
+
     return run(
+            () -> {
+              double factor = Math.signum(setpoint) * Math.signum(m_drivetrain.getAngle());
+              double output =
+                  m_drivetrain.calculateRotOutput(m_drivetrain.getAngle() * factor, setpoint);
+              SmartDashboard.putNumber("rotPidOutput", output);
+              m_drivetrain.arcadeDrive(0, output);
+            },
+            m_drivetrain)
+        .until(
             () ->
-                m_romiDrivetrain.arcadeDrive(
-                    0.1, m_romiDrivetrain.calculateRotOutput(m_romiDrivetrain.getRotZ(), setpoint)),
-            m_romiDrivetrain)
-        .until(() -> Math.abs(m_romiDrivetrain.getRotZ() - setpoint) < threshold)
-        .finallyDo(() -> m_romiDrivetrain.arcadeDrive(0, 0));
+                Math.abs(
+                        Math.signum(setpoint)
+                                * Math.signum(m_drivetrain.getAngle())
+                                * m_drivetrain.getAngle()
+                            - setpoint)
+                    < threshold)
+        .finallyDo(() -> m_drivetrain.arcadeDrive(0, 0));
   }
 
   public Command translateRomi(double distMeters, double threshold) {
-    double setpoint = m_romiDrivetrain.getLeftDistanceMeter() + distMeters;
+    double setpoint = m_drivetrain.getLeftDistanceMeter() + distMeters;
     return run(
-            () ->
-                m_romiDrivetrain.arcadeDrive(
-                    m_romiDrivetrain.calculateTranslateOutput(
-                        m_romiDrivetrain.getLeftDistanceMeter(), setpoint),
-                    0),
-            m_romiDrivetrain)
-        .until(() -> Math.abs(m_romiDrivetrain.getLeftDistanceMeter() - setpoint) < threshold)
-        .finallyDo(() -> m_romiDrivetrain.arcadeDrive(0, 0));
+            () -> {
+              double output =
+                  m_drivetrain.calculateTranslateOutput(
+                      m_drivetrain.getLeftDistanceMeter(), setpoint);
+              SmartDashboard.putNumber("translationPidOutput", output);
+              m_drivetrain.arcadeDrive(output, 0);
+            },
+            m_drivetrain)
+        .until(() -> Math.abs(m_drivetrain.getLeftDistanceMeter() - setpoint) < threshold)
+        .finallyDo(() -> m_drivetrain.arcadeDrive(0, 0));
   }
 
   public Command schedulePath(Command[] pathCommands) {
