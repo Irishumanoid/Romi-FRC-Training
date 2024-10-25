@@ -13,10 +13,12 @@ import edu.wpi.first.wpilibj.BuiltInAccelerometer;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.romi.RomiGyro;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.Constants.Mode;
+
 import org.littletonrobotics.junction.AutoLogOutput;
+import org.littletonrobotics.junction.Logger;
 
 public class Drivetrain extends SubsystemBase {
 
@@ -27,10 +29,11 @@ public class Drivetrain extends SubsystemBase {
   private final RomiGyro m_gyro;
   private final BuiltInAccelerometer m_accelerometer;
   private final DifferentialDriveOdometry m_odometry; // TODO use pose estimator to track pose
-  private final ReplanningConfig replanningConfig = new ReplanningConfig();
+  private final ReplanningConfig m_replanningConfig = new ReplanningConfig();
 
-  private final PIDController rotController;
-  private final PIDController translateController;
+  private final PIDController m_rotController;
+  private final PIDController m_translateController;
+  private double m_rotation; // degrees
 
   public Drivetrain(WheelIO left, WheelIO right) {
     m_leftWheel = new Wheel(left, 0);
@@ -41,25 +44,31 @@ public class Drivetrain extends SubsystemBase {
     m_gyro.reset();
     m_accelerometer = new BuiltInAccelerometer();
 
+    if (Constants.currentMode == Mode.SIM) {
+      m_rotation = 0;
+    } else {
+      m_rotation = m_gyro.getAngle();
+    }
+
     m_odometry =
         new DifferentialDriveOdometry(
-            new Rotation2d(m_gyro.getAngle()),
+            new Rotation2d(m_rotation),
             m_leftWheel.getPosition(),
             m_rightWheel.getPosition());
 
     switch (Constants.currentMode) {
       case REAL:
       case REPLAY:
-        translateController = new PIDController(0.05, 0.0, 0.0);
-        rotController = new PIDController(7.0, 0.0, 0.0);
+        m_translateController = new PIDController(0.05, 0.0, 0.0);
+        m_rotController = new PIDController(7.0, 0.0, 0.0);
         break;
       case SIM:
-        translateController = new PIDController(0.1, 0.0, 0.0);
-        rotController = new PIDController(10.0, 0.0, 0.0);
+        m_translateController = new PIDController(0.1, 0.0, 0.0);
+        m_rotController = new PIDController(10.0, 0.0, 0.0);
         break;
       default:
-        translateController = new PIDController(0.1, 0.0, 0.0);
-        rotController = new PIDController(10.0, 0.0, 0.0);
+        m_translateController = new PIDController(0.1, 0.0, 0.0);
+        m_rotController = new PIDController(10.0, 0.0, 0.0);
         break;
     }
 
@@ -68,13 +77,12 @@ public class Drivetrain extends SubsystemBase {
         this::resetOdometry,
         this::getSpeeds,
         this::driveChassisSpeeds,
-        replanningConfig,
+        m_replanningConfig,
         this::allianceCheck,
         this);
   }
 
   public void arcadeDrive(double xaxisSpeed, double zaxisRotate) {
-    System.out.println("speed" + xaxisSpeed);
     m_diffDrive.arcadeDrive(xaxisSpeed, zaxisRotate);
   }
 
@@ -102,7 +110,7 @@ public class Drivetrain extends SubsystemBase {
   }
 
   public double getAngle() {
-    return m_gyro.getAngle() % 360;
+    return m_rotation;
   }
 
   public double getAccelerationX() {
@@ -123,11 +131,11 @@ public class Drivetrain extends SubsystemBase {
   }
 
   public double calculateRotOutput(double curRot, double setpoint) {
-    return rotController.calculate(curRot, setpoint);
+    return m_rotController.calculate(curRot, setpoint);
   }
 
   public double calculateTranslateOutput(double curDist, double setpoint) {
-    return translateController.calculate(curDist, setpoint);
+    return m_translateController.calculate(curDist, setpoint);
   }
 
   public ChassisSpeeds getSpeeds() {
@@ -137,7 +145,7 @@ public class Drivetrain extends SubsystemBase {
 
   public void resetOdometry(Pose2d pose) {
     m_odometry.resetPosition(
-        new Rotation2d(m_gyro.getAngle()),
+        new Rotation2d(m_rotation),
         new DifferentialDriveWheelPositions(m_leftWheel.getPosition(), m_rightWheel.getPosition()),
         pose);
   }
@@ -152,14 +160,21 @@ public class Drivetrain extends SubsystemBase {
 
   @Override
   public void periodic() {
+    if (Constants.currentMode == Mode.SIM) {
+      m_rotation = (m_leftWheel.getPosition() - m_rightWheel.getPosition()) / 2;
+    } else {
+      m_rotation = m_gyro.getAngle();
+    }
+
     m_leftWheel.periodic();
     m_rightWheel.periodic();
+    m_leftWheel.updateInputs();
+    m_rightWheel.updateInputs();
+
+    Logger.recordOutput("gyro angle", m_gyro.getAngle());
+    Logger.recordOutput("left wheel", m_leftWheel.getPosition());
+    Logger.recordOutput("right wheel", m_leftWheel.getPosition());
     m_odometry.update(
-        new Rotation2d(m_gyro.getAngle()), m_leftWheel.getPosition(), m_rightWheel.getPosition());
-    SmartDashboard.putNumber(
-        "drive/pose-rotation", m_odometry.getPoseMeters().getRotation().getRadians());
-    SmartDashboard.putNumber("drive/x-translation", m_odometry.getPoseMeters().getX());
-    SmartDashboard.putNumber("drive/y-translation", m_odometry.getPoseMeters().getY());
-    SmartDashboard.putNumber("drive/angle", getAngle());
+        new Rotation2d(m_rotation), m_leftWheel.getPosition(), m_rightWheel.getPosition());
   }
 }

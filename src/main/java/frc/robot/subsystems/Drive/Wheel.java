@@ -1,11 +1,11 @@
 package frc.robot.subsystems.Drive;
 
 import org.littletonrobotics.junction.Logger;
-
 public class Wheel {
   private final int index;
   private final WheelIO wheel;
   private final WheelIOInputsAutoLogged wheelAutoLogged = new WheelIOInputsAutoLogged();
+
 
   public Wheel(WheelIO wheel, int index) {
     this.wheel = wheel;
@@ -21,6 +21,7 @@ public class Wheel {
   }
 
   public void set(double speed) {
+    System.out.println("setting wheel " + Integer.toString(index) + " speed to: " + speed);
     wheel.setDriveSpeed(speed);
   }
 
